@@ -1,0 +1,30 @@
+package v1
+
+import (
+	"{{.ModPrefix}}{{.Name}}/internal/controllers"
+	"{{.ModPrefix}}{{.Name}}/internal/dao"
+	"{{.ModPrefix}}{{.Name}}/internal/pkg/api"
+	"{{.ModPrefix}}{{.Name}}/internal/services"
+
+	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/core/router"
+)
+
+type Ctrl struct {
+	overview controllers.Overview
+}
+
+func NewCtrl(dao *dao.Dao) api.Router {
+	ctl := &Ctrl{
+		overview: controllers.Overview{
+			Srv: services.NewOverviewService(dao),
+		},
+	}
+	return ctl
+}
+
+func (c *Ctrl) Route(app iris.Party) {
+	app.PartyFunc("", func(r router.Party) {
+		r.Get("/overview", api.Handler(c.overview.GetOverview))
+	})
+}

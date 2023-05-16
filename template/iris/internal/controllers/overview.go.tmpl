@@ -1,0 +1,15 @@
+package controllers
+
+import (
+	"github.com/kataras/iris/v12"
+	"{{.ModPrefix}}{{.Name}}/internal/services"
+)
+
+type Overview struct {
+	Srv services.Overview
+}
+
+func (o *Overview) GetOverview(ctx iris.Context) (interface{}, error) {
+	resp := o.Srv.GetOverview("")
+    return resp, nil
+}

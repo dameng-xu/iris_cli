@@ -1,0 +1,57 @@
+package main
+
+import (
+    "context"
+	"{{.ModPrefix}}{{.Name}}/configs"
+	"{{.ModPrefix}}{{.Name}}/internal/dao"
+	"{{.ModPrefix}}{{.Name}}/internal/pkg/db"
+	"{{.ModPrefix}}{{.Name}}/internal/pkg/logger"
+	"{{.ModPrefix}}{{.Name}}/internal/routers"
+	"flag"
+	"fmt"
+	"log"
+
+	"github.com/kataras/iris/v12"
+
+	"{{.ModPrefix}}{{.Name}}/internal/tasks"
+	irisLog "github.com/kataras/iris/v12/middleware/logger"
+)
+
+var configFile = flag.String("f", "./config/config.yaml", "Specify the config file")
+
+func main() {
+	flag.Parse()
+
+	configs.MustInitConfig(*configFile)
+	conf := configs.GetConfig()
+	// logger
+	logger.Logger = logger.MustInitLogger(conf.LogPath, "{{.ModPrefix}}{{.Name}}")
+	// mysql and redis
+	db.MustInitMysqlDB(conf.Mysql)
+	db.MustInitRedisDB(conf.Redis)
+
+	//init dao
+	dao.InitDao(db.GetCtxDB(context.Background()))
+
+	// task
+	go tasks.RunTask()
+
+	app := newApp()
+	listenAddr := fmt.Sprintf("%s:%d", conf.Service.Host, conf.Service.Port)
+	err := app.Run(iris.Addr(listenAddr))
+	if err != nil {
+		log.Fatalf("app run failed :%v\n", err)
+	}
+}
+
+func newApp() *iris.Application {
+	app := iris.New()
+	app.Use(irisLog.New(irisLog.Config{
+		Method: true,
+		Path:   true,
+		Query:  true,
+	}))
+	routers.InitRouters(app) // 注册路由
+
+	return app
+}

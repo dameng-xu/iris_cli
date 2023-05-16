@@ -1,0 +1,25 @@
+package services
+
+import (
+	"{{.ModPrefix}}{{.Name}}/internal/dao"
+	"{{.ModPrefix}}{{.Name}}/internal/proto"
+)
+
+type overviewService struct {
+	dao *dao.Dao
+}
+
+func NewOverviewService(dao *dao.Dao) Overview {
+	return &overviewService{
+		dao: dao,
+	}
+}
+
+type Overview interface {
+	GetOverview(period string) proto.OverviewResp
+}
+
+func (p *overviewService) GetOverview(period string) proto.OverviewResp {
+	var resp proto.OverviewResp
+	return resp
+}

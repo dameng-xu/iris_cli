@@ -1,0 +1,46 @@
+package db
+
+import (
+	"context"
+	"fmt"
+	"github.com/go-redis/redis/v8"
+	"log"
+	"{{.ModPrefix}}{{.Name}}/configs"
+)
+
+var rdb *redis.Client
+
+type RedisConfig struct {
+	Url      string
+	Host     string
+	Port     int
+	Password string
+	DB       int
+}
+
+func NewRedisDB(conf *RedisConfig) {
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     conf.Url,
+		Password: conf.Password,
+		DB:       conf.DB,
+	})
+	_, err := rdb.Ping(context.Background()).Result()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func MustInitRedisDB(c configs.Redis) {
+	conf := &RedisConfig{
+		Host:     c.Host,
+		Port:     c.Port,
+		Password: c.Password,
+		DB:       c.DB,
+	}
+	conf.Url = fmt.Sprintf("%s:%d", conf.Host, conf.Port)
+	NewRedisDB(conf)
+}
+
+func GetRDB() *redis.Client {
+	return rdb
+}

@@ -1,0 +1,11 @@
+package uuid
+
+import (
+	"strings"
+
+	"github.com/satori/go.uuid"
+)
+
+func NewUUID() string {
+	return strings.ReplaceAll(uuid.NewV4().String(), "-", "")
+}

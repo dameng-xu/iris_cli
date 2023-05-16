@@ -1,0 +1,52 @@
+package utils
+
+import (
+	"github.com/hashicorp/go-version"
+	"regexp"
+)
+
+func RemoveRepeat(list []string) []string {
+	set := make(map[string]bool, len(list))
+	index := 0
+	for _, v := range list {
+		_, ok := set[v]
+		if ok {
+			continue
+		}
+		set[v] = true
+		list[index] = v
+		index++
+	}
+	return list[:index]
+}
+
+func RemoveChinese(str string) string {
+	reg := regexp.MustCompile("[\u4e00-\u9fa5]")
+	return reg.ReplaceAllString(str, "")
+}
+
+func VersionCompare(version1, version2 string) (int, error) {
+	v1, err := version.NewVersion(version1)
+	if err != nil {
+		return 0, err
+	}
+	v2, err := version.NewVersion(version2)
+	if err != nil {
+		return 0, err
+	}
+
+	if v1 == nil {
+		return -1, nil
+	}
+	if v2 == nil {
+		return 1, nil
+	}
+
+	if v1.LessThan(v2) {
+		return -1, nil
+	} else if v1.Equal(v2) {
+		return 0, nil
+	} else {
+		return 1, nil
+	}
+}

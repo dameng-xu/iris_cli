@@ -1,0 +1,84 @@
+package api
+
+import (
+	"github.com/google/uuid"
+	"github.com/kataras/iris/v12"
+	"gitlab.moresec.cn/deliver/go-common/pkg/errorx"
+	"net/http"
+	"runtime/debug"
+)
+
+type Response struct {
+	Code      int         `json:"code"`           //返回状态码
+	Message   string      `json:"message"`        //返回错误描述
+	Data      interface{} `json:"data,omitempty"` //返回数据
+	Error     string      `json:"error"`          //error信息
+	RequestId string      `json:"request_id"`     //请求ID
+}
+
+func (re *Response) Success(ctx iris.Context, data interface{}) {
+	rsp := &Response{
+		Code:      200,
+		Message:   "ok",
+		Data:      data,
+		RequestId: GetRequestID(ctx),
+	}
+	ctx.StatusCode(http.StatusOK)
+	_, _ = ctx.JSON(rsp)
+	return
+}
+
+func (re *Response) Fail(ctx iris.Context, err interface{}) {
+	var rsp *Response
+	if e, ok := err.(errorx.Error); ok { //自定义错误
+		rsp = &Response{
+			Code:      e.GetBusinessCode(),
+			Message:   e.GetMessage(),
+			Data:      nil,
+			RequestId: GetRequestID(ctx),
+		}
+		if e.GetErr() != nil {
+			rsp.Error = e.Error()
+		}
+	} else {
+		e := errorx.ErrInterval.WithErr(err.(error))
+		rsp = &Response{
+			Code:    e.GetBusinessCode(),
+			Message: e.GetMessage(),
+			Data:    nil,
+		}
+	}
+
+	_, _ = ctx.JSON(rsp)
+	return
+}
+
+func Handler(f func(ctx iris.Context) (interface{}, error)) func(ctx iris.Context) {
+	resp := &Response{}
+	return func(ctx iris.Context) {
+		defer func() {
+			if err := recover(); err != nil {
+				debug.PrintStack()
+				resp.Fail(ctx, err)
+				return
+			}
+		}()
+
+		data, err := f(ctx)
+		if err != nil {
+			resp.Fail(ctx, err)
+		} else {
+			resp.Success(ctx, data)
+		}
+	}
+}
+
+func GetRequestID(ctx iris.Context) string {
+	requestID := ctx.GetHeader("X-Request-ID")
+	if requestID == "" {
+		requestID = uuid.New().String()
+		ctx.Header("X-Request-ID", requestID)
+		ctx.Request().Header.Set("X-Request-ID", requestID)
+	}
+	return requestID
+}

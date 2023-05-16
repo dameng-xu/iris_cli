@@ -1,0 +1,53 @@
+package configs
+
+import (
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"log"
+)
+
+type Service struct {
+	Host string `yaml:"host"`
+	Port int    `yaml:"port"`
+}
+
+type Mysql struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DB       string `yaml:"db"`
+	LogMode  string `yaml:"log_mode"`
+}
+
+type Redis struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
+	Prefix   string `yaml:"prefix"` // 前缀
+}
+
+type Config struct {
+	Service Service `yaml:"service"`
+	Mysql   Mysql   `yaml:"mysql"`
+	Redis   Redis   `yaml:"redis"`
+	LogPath string  `yaml:"log_path"`
+}
+
+var config *Config
+
+func MustInitConfig(configPath string) {
+	config = new(Config)
+	body, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if e := yaml.Unmarshal(body, config); e != nil {
+		log.Fatal(err)
+	}
+}
+
+func GetConfig() *Config {
+	return config
+}

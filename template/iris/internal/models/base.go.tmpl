@@ -1,0 +1,13 @@
+package models
+
+import (
+	"gorm.io/gorm"
+	"time"
+)
+
+type BaseModel struct {
+	ID        int            `gorm:"column:id;type:int(11);primaryKey;autoIncrement;comment:主键"`
+	CreatedAt time.Time      `gorm:"column:created_at;type:datetime;comment:创建时间"`
+	UpdatedAt time.Time      `gorm:"column:updated_at;type:datetime;comment:更新时间"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index;comment:删除时间"`
+}

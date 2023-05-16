@@ -1,0 +1,65 @@
+package logger
+
+import (
+	"fmt"
+	nested "github.com/antonfisher/nested-logrus-formatter"
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
+	"github.com/sirupsen/logrus"
+	"io"
+	"log"
+	"os"
+	"path"
+	"time"
+)
+
+var (
+	Logger *logrus.Logger
+)
+
+type LoggerConfig struct {
+	LogPath  string
+	AppName  string
+	LogLevel logrus.Level
+	Debug    bool
+}
+
+func NewLogger(conf *LoggerConfig) *logrus.Logger {
+	logger := logrus.New()
+	logFile := path.Join(conf.LogPath, fmt.Sprintf("%s.log", conf.AppName))
+
+	logger.SetLevel(conf.LogLevel)
+	logger.SetReportCaller(true)
+	logger.SetFormatter(&nested.Formatter{
+		HideKeys:        true,
+		NoColors:        true,
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
+
+	logWriter, _ := rotatelogs.New(
+		logFile+".%Y-%m-%d",
+		rotatelogs.WithLinkName(logFile),          //生成软链 指向最新的日志文件
+		rotatelogs.WithMaxAge(7*24*time.Hour),     //文件最大保存时间
+		rotatelogs.WithRotationTime(24*time.Hour), //设置日志切割时间间隔(1天)(隔多久分割一次)
+	)
+	if conf.Debug {
+		logger.SetOutput(io.MultiWriter(os.Stdout, logWriter))
+	} else {
+		logger.SetOutput(logWriter)
+	}
+	return logger
+}
+
+func MustInitLogger(logPath string, appName string) *logrus.Logger {
+	if err := os.MkdirAll(logPath, os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+
+	conf := &LoggerConfig{
+		LogPath:  logPath,
+		AppName:  appName,
+		LogLevel: logrus.TraceLevel,
+		Debug:    false,
+	}
+
+	return NewLogger(conf)
+}

@@ -1,0 +1,21 @@
+package dao
+
+import (
+	"gorm.io/gorm"
+)
+
+var dao *Dao
+
+type Dao struct {
+	OverviewDao Overview
+}
+
+func InitDao(db *gorm.DB) {
+	dao = &Dao{
+		OverviewDao: NewOverviewDao(db),
+	}
+}
+
+func GetDao() *Dao {
+	return dao
+}
