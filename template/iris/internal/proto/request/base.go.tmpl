@@ -1,0 +1,18 @@
+package request
+
+import "gorm.io/gorm"
+
+// PageParam 通用分页参数
+type PageParam struct {
+	Page     int `url:"page" json:"page" form:"page" validate:"gte=1"`
+	PageSize int `url:"page_size" json:"page_size" form:"page_size" validate:"gte=1"`
+}
+
+// Pagination 实现分页效果
+func (p PageParam) Pagination(tx *gorm.DB) *gorm.DB {
+	offset := (p.Page - 1) * p.PageSize
+	if offset <= 0 {
+		offset = 0
+	}
+	return tx.Limit(p.PageSize).Offset(offset)
+}
