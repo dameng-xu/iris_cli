@@ -3,17 +3,17 @@ package main
 import (
     "context"
 	"{{.ModPrefix}}{{.Name}}/configs"
-	"{{.ModPrefix}}{{.Name}}/internal/dao"
-	"{{.ModPrefix}}{{.Name}}/internal/pkg/db"
-	"{{.ModPrefix}}{{.Name}}/internal/pkg/logger"
-	"{{.ModPrefix}}{{.Name}}/internal/routers"
+	"{{.ModPrefix}}{{.Name}}/dao"
+	"{{.ModPrefix}}{{.Name}}/pkg/db"
+	"{{.ModPrefix}}{{.Name}}/pkg/logger"
+	"{{.ModPrefix}}{{.Name}}/routers"
 	"flag"
 	"fmt"
 	"log"
 
 	"github.com/kataras/iris/v12"
 
-	"{{.ModPrefix}}{{.Name}}/internal/tasks"
+	"{{.ModPrefix}}{{.Name}}/tasks"
 	irisLog "github.com/kataras/iris/v12/middleware/logger"
 )
 
