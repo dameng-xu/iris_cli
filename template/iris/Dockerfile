@@ -1,16 +1,17 @@
-FROM alpine:3.15 as prod
+FROM harbor.moresec.cn/sast/golang:1.18.2-alpine3.15-amd64 as builder
 
-USER root
-ENV TZ=Asia/Shanghai
-ENV LANG=en_US.UTF-8
-ENV LANGUAGE=en_US.UTF-8
+COPY . /workdir
+WORKDIR /workdir/{{.ModPrefix}}{{.Name}}
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-w -s" -o {{.ModPrefix}}{{.Name}} ./cmd/main.go
+
+FROM harbor.moresec.cn/moresec/alpine_cn:1.0.0
 
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories && \
-    apk update -vU --allow-untrusted && \
-    apk add --no-cache tzdata
+  apk update -vU --allow-untrusted && \
+  apk add --no-cache bash curl iputils tcptraceroute iproute2 vim python2 p7zip openssl
 
-WORKDIR /home/moresec/{{.ModPrefix}}{{.Name}}
+ENV ZONEINFO /home/moresec/conf/zoneinfo.zip
 
-COPY  /release/bin/{{.ModPrefix}}{{.Name}} .
-
-CMD ["./{{.ModPrefix}}{{.Name}}"]
+EXPOSE 8001
+COPY --from=builder /workdir/{{.ModPrefix}}{{.Name}}/{{.ModPrefix}}{{.Name}}  /app/{{.ModPrefix}}{{.Name}}
