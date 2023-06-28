@@ -17,4 +17,9 @@ redis:
   db:
   prefix: {{.ModPrefix}}{{.Name}}
 
+schedule:
+  demo:
+    rule: "*/5 * * * *"
+    manual_trigger: false
+
 log_path: {{.LogPath}}

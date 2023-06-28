@@ -1,5 +1,61 @@
 package tasks
 
-// RunTask define the task
+import (
+	"{{.ModPrefix}}{{.Name}}/configs"
+	"{{.ModPrefix}}{{.Name}}/pkg/logger"
+	"github.com/robfig/cron/v3"
+)
+
+type TaskFunc func()
+
+type Task struct {
+	Name          string     //任务名称
+	Rule          string     //任务定时规则
+	Method        TaskFunc   //任务执行方法
+	ManualMethods []TaskFunc //手动执行的方法
+	ManualTrigger bool       //是否手动触发
+	Stop          bool       //是否停止任务
+}
+
+var tasks = []*Task{
+	{
+		Name:          "demo",
+		Rule:          "@every 5 min",
+		Method:        Demo,
+		ManualMethods: []TaskFunc{},
+	},
+}
+
 func RunTask() {
+	c := cron.New()
+	cfg := configs.GetConfig()
+
+	if cfg.Schedule == nil {
+		cfg.Schedule = make(map[string]configs.ScheduleItem)
+	}
+
+	for _, task := range tasks {
+		//配置覆盖
+		if _, ok := cfg.Schedule[task.Name]; ok {
+			if cfg.Schedule[task.Name].Rule != "" {
+				task.Rule = cfg.Schedule[task.Name].Rule
+			}
+			task.ManualTrigger = cfg.Schedule[task.Name].ManualTrigger
+			task.Stop = cfg.Schedule[task.Name].Stop
+		}
+		if task.Stop {
+			continue
+		}
+
+		//添加定时任务
+		_, _ = c.AddFunc(task.Rule, task.Method)
+		//手动运行一次
+		if task.ManualTrigger && len(task.ManualMethods) > 0 {
+			for _, f := range task.ManualMethods {
+				f()
+			}
+		}
+	}
+	logger.Logger.WithField("task", "main").Info("task init ... ")
+	c.Run()
 }

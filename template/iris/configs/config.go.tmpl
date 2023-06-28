@@ -28,11 +28,18 @@ type Redis struct {
 	Prefix   string `yaml:"prefix"` // 前缀
 }
 
+type ScheduleItem struct {
+	Rule          string `yaml:"rule"`
+	ManualTrigger bool   `yaml:"manual_trigger"`
+	Stop          bool   `yaml:"stop"`
+}
+
 type Config struct {
-	Service Service `yaml:"service"`
-	Mysql   Mysql   `yaml:"mysql"`
-	Redis   Redis   `yaml:"redis"`
-	LogPath string  `yaml:"log_path"`
+	Service  Service                 `yaml:"service"`
+	Mysql    Mysql                   `yaml:"mysql"`
+	Redis    Redis                   `yaml:"redis"`
+	Schedule map[string]ScheduleItem `yaml:"schedule"` // 定时任务调度
+	LogPath  string                  `yaml:"log_path"`
 }
 
 var config *Config
