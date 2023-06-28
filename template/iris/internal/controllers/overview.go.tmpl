@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"github.com/kataras/iris/v12"
+	"{{.ModPrefix}}{{.Name}}/internal/pkg/wrapper"
 	"{{.ModPrefix}}{{.Name}}/internal/services"
 )
 
@@ -9,7 +9,7 @@ type Overview struct {
 	Srv services.Overview
 }
 
-func (o *Overview) GetOverview(ctx iris.Context) (interface{}, error) {
-	resp := o.Srv.GetOverview("")
-    return resp, nil
+func (o *Overview) GetOverview(ctx *wrapper.Context) {
+	wrapper.ApiWrapper(ctx, o.Srv.GetOverview, false, nil, nil)
 }
+

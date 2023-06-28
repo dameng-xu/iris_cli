@@ -14,7 +14,7 @@ type baseResp struct {
 
 func Success(ctx iris.Context, data interface{}) {
 	requestId := ctx.ResponseWriter().Header().Get("Request-Id")
-	_, err := ctx.JSON(baseResp{
+	err := ctx.JSON(baseResp{
 		Code:      200,
 		Message:   "success",
 		Data:      data,
@@ -27,7 +27,7 @@ func Success(ctx iris.Context, data interface{}) {
 
 func Error(ctx iris.Context, code int, msg string, data interface{}) {
 	requestId := ctx.ResponseWriter().Header().Get("Request-Id")
-	_, err := ctx.JSON(baseResp{
+	err := ctx.JSON(baseResp{
 		Code:      code,
 		Message:   msg,
 		Data:      data,

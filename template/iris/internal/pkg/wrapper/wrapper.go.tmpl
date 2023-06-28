@@ -1,0 +1,111 @@
+package wrapper
+
+import (
+	"{{.ModPrefix}}{{.Name}}/internal/pkg/logger"
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"runtime/debug"
+
+	"github.com/kataras/iris/v12"
+	"gopkg.in/go-playground/validator.v9"
+)
+
+type (
+	ApiHandler func(ctx *Context, reqBody interface{}) error
+)
+
+type ApiConfig struct {
+	ReqType CheckType
+}
+
+var validate = validator.New()
+
+// ApiWrapper params 约定:
+// 若params不为空，首个元素必定为 *ApiConfig，其余为调用者转发参数
+func ApiWrapper(ctx *Context, handler ApiHandler, paramChecker bool,
+	reqBody interface{}, params ...interface{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			debug.PrintStack()
+			errStr := fmt.Sprintf("recover:%v", r)
+			logger.Logger.Error(errStr)
+			SendApiErrorResponse(ctx, nil, "内部错误")
+		}
+	}()
+
+	if reqBody != nil {
+		if len(params) == 0 {
+			logger.Logger.Error("ApiWrapper传入params为空")
+			SendApiBadResponse(ctx, nil, "params is empty")
+			return
+		}
+
+		config := params[0].(*ApiConfig)
+		var err error
+		switch config.ReqType {
+		case CHECKTYPE_FORM:
+			err = ctx.ReadForm(reqBody)
+		case CHECKTYPE_JSON:
+			err = ctx.ReadJSON(reqBody)
+		case CHECKTYPE_QUERY:
+			err = ctx.ReadQuery(reqBody)
+		}
+		if err != nil && !iris.IsErrPath(err) {
+			logger.Logger.Error("ApiWrapper解析reqBody失败", err.Error())
+			SendApiBadResponse(ctx, nil, "parse reqBody failed")
+			return
+		}
+
+		// 参数校验
+		if paramChecker {
+			if paramErr, err := checkParam(config.ReqType, reqBody); err != nil || paramErr != nil {
+				if err != nil {
+					logger.Logger.Error("checker param error", err.Error())
+					SendApiBadResponse(ctx, nil, "checker param field failed ")
+				} else {
+					if msg, err := json.Marshal(paramErr); err == nil {
+						SendApiBadResponse(ctx, nil, string(msg))
+					} else {
+						logger.Logger.Error("marshal err param msg failed", err.Error())
+						SendApiBadResponse(ctx, nil, "checker param field failed ")
+					}
+				}
+				return
+			}
+		}
+	}
+
+	err := handler(ctx, reqBody)
+	if err != nil {
+		SendApiErrorResponse(ctx, nil, "内部错误")
+	}
+}
+
+func checkParam(reqType CheckType, reqBody interface{}) (map[string]string, error) {
+	err := validate.Struct(reqBody)
+	if err != nil {
+		if _, ok := err.(*validator.InvalidValidationError); ok {
+			return nil, err
+		}
+		paramErr := make(map[string]string)
+		for _, err := range err.(validator.ValidationErrors) {
+			st := reflect.TypeOf(reqBody)
+			//fmt.Println(st.Kind())
+			if param, ok := st.Elem().FieldByName(err.StructField()); ok {
+				if reqType == CHECKTYPE_JSON {
+					tag := param.Tag.Get("json")
+					paramErr[tag] = "Invalid input"
+				} else if reqType == CHECKTYPE_FORM {
+					tag := param.Tag.Get("form")
+					paramErr[tag] = "Invalid input"
+				}
+
+			}
+		}
+
+		// from here you can create your own error messages in whatever language you wish
+		return paramErr, nil
+	}
+	return nil, nil
+}

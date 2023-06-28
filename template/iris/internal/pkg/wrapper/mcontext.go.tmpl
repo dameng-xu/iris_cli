@@ -1,0 +1,176 @@
+package wrapper
+
+import (
+	"{{.ModPrefix}}{{.Name}}/internal/pkg/logger"
+	"encoding/json"
+	"runtime"
+	"sync"
+
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
+
+	"github.com/kataras/iris/v12"
+)
+
+// Context is our custom context.
+// Let's implement a context which will give us access
+type Context struct {
+	iris.Context
+	UserToken *AuthResult
+
+	LogType   int
+	LogAttr   string
+	LogResult int
+	Username  string
+}
+
+type AuthResult struct {
+	Certificate string `json:"certificate"` //认证
+	UserID      string `json:"user_id"`     //用户id
+	UserName    string `json:"user_name"`   //用户名
+	Role        Role   `json:"role"`        //角色信息
+	NS          string `json:"ns"`          //namespace
+	Extra       *Extra `json:"extra"`       //扩展信息
+	Scope       Scope  `json:"scope"`       //权限返回信息
+	//Roles       []*users.UserRole `json:"roles"`       // 多角色
+}
+
+type Role struct {
+	ID   string `json:"id"`   //角色id
+	Name string `json:"name"` //角色名
+}
+
+type Extra struct {
+	NS        string   `json:"ns"`         //namespace
+	CorpName  string   `json:"corp_name"`  //企业名
+	DeptName  []string `json:"dept_name"`  //部门名
+	LoginType string   `json:"login_type"` //登录方式
+	Built     bool     `json:"built"`      //内建用户
+}
+type Scope map[string][]string
+
+func (s *Scope) UnmarshalJSON(i []byte) error {
+	data := make(map[string]interface{})
+	err := json.Unmarshal(i, &data)
+	if err != nil {
+		return err
+	}
+	if *s == nil {
+		*s = make(map[string][]string)
+	}
+	for k, v := range data {
+		if v == nil {
+			(*s)[k] = []string{}
+		}
+		switch t := v.(type) {
+		case bool:
+			(*s)[k] = []string{}
+		case []interface{}:
+			(*s)[k] = make([]string, 0, len(t))
+			for idx, item := range t {
+				if vv, ok := item.(string); ok {
+					(*s)[k] = append((*s)[k], vv)
+				} else {
+					return errors.Errorf("invalid type %s/%d ", k, idx)
+				}
+			}
+		case []string:
+			(*s)[k] = t
+		default:
+			return errors.Errorf("invalid %s' value", k)
+		}
+	}
+	return nil
+}
+
+func (s Scope) MarshalJSON() ([]byte, error) {
+	data := make(map[string]interface{})
+	for k, ls := range s {
+		if len(ls) == 0 {
+			data[k] = true
+		} else {
+			data[k] = ls
+		}
+	}
+	return json.Marshal(data)
+}
+
+var contextPool = sync.Pool{New: func() interface{} {
+	return &Context{}
+}}
+
+func Acquire(original iris.Context, login bool) *Context {
+	ctx := contextPool.Get().(*Context)
+	ctx.Context = original // set the context to the original one in order to have access to iris's implementation.
+	if login {
+		ctx.UserToken = GetAuthInfo(original)
+		if ctx.UserToken == nil {
+			ctx.StatusCode(401)
+			ctx.StopExecution()
+		} else {
+			ctx.Username = ctx.UserToken.UserName
+		}
+	}
+	return ctx
+}
+
+func Release(ctx *Context) {
+	ctx.UserToken = nil
+	contextPool.Put(ctx)
+}
+
+func defaultUserInfo() *AuthResult {
+	return &AuthResult{
+		Certificate: "",
+		UserID:      "1",
+		UserName:    "admin",
+		Role: Role{
+			ID:   "1",
+			Name: "admin",
+		},
+		NS:    "",
+		Extra: nil,
+		Scope: nil,
+	}
+}
+
+func GetAuthInfo(ctx iris.Context) (authInfo *AuthResult) {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		return defaultUserInfo()
+	}
+	user := ctx.GetHeader("User")
+	if user == "" {
+		logger.Logger.Error("Empty User")
+		return nil
+	}
+	authInfo = &AuthResult{}
+	err := json.Unmarshal([]byte(user), &authInfo)
+	if err != nil {
+		logger.Logger.Error("auth info json unmarshal failed", zap.Error(err))
+		return nil
+	}
+	logger.Logger.Debugf("[AUTH_INFO] username: %v", authInfo.UserName)
+	return authInfo
+}
+
+// Handler will convert our handler of func(*Context) to an iris Handler,
+// in order to be compatible with the HTTP API.
+func Handler(h func(*Context)) iris.Handler {
+	return func(original iris.Context) {
+		ctx := Acquire(original, true)
+		if !ctx.IsStopped() { // 请求被终止
+			h(ctx)
+		}
+		Release(ctx)
+	}
+}
+
+func HandlerNotLogin(h func(*Context)) iris.Handler {
+	return func(original iris.Context) {
+		ctx := Acquire(original, false)
+		if !ctx.IsStopped() { // 请求被终止
+			h(ctx)
+		}
+		Release(ctx)
+	}
+}

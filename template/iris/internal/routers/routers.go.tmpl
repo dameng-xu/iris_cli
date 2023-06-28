@@ -3,6 +3,7 @@ package routers
 import (
 	"github.com/kataras/iris/v12"
 	"{{.ModPrefix}}{{.Name}}/internal/dao"
+	"{{.ModPrefix}}{{.Name}}/internal/proto/response"
 	"{{.ModPrefix}}{{.Name}}/internal/pkg/api"
 	"{{.ModPrefix}}{{.Name}}/internal/routers/api/v1"
 )
@@ -27,6 +28,9 @@ type Server struct {
 // @BasePath /api
 
 func InitRouters(app *iris.Application) {
+    app.Get("/health", func(ctx iris.Context) {
+		response.Success(ctx, "OK")
+	})
 	s := &Server{
 		v1: v1.NewCtrl(dao.GetDao()),
 	}

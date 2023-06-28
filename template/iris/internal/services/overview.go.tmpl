@@ -2,7 +2,8 @@ package services
 
 import (
 	"{{.ModPrefix}}{{.Name}}/internal/dao"
-	"{{.ModPrefix}}{{.Name}}/internal/proto"
+	"{{.ModPrefix}}{{.Name}}/internal/pkg/wrapper"
+	"{{.ModPrefix}}{{.Name}}/internal/proto/response"
 )
 
 type overviewService struct {
@@ -16,10 +17,12 @@ func NewOverviewService(dao *dao.Dao) Overview {
 }
 
 type Overview interface {
-	GetOverview(period string) proto.OverviewResp
+	GetOverview(ctx *wrapper.Context, reqBody interface{}) error
 }
 
-func (p *overviewService) GetOverview(period string) proto.OverviewResp {
-	var resp proto.OverviewResp
-	return resp
+func (p *overviewService) GetOverview(ctx *wrapper.Context, reqBody interface{}) error {
+	var resp response.OverviewResp
+	wrapper.SendApiResponse(ctx, resp)
+	return nil
 }
+

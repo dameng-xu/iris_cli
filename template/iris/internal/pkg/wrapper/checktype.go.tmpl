@@ -1,0 +1,23 @@
+package wrapper
+
+type CheckType = int32
+
+const (
+	_ CheckType = iota
+	CHECKTYPE_FORM
+	CHECKTYPE_JSON
+	CHECKTYPE_QUERY
+)
+
+func GetParseLabelType(labelTyp CheckType) string {
+	switch labelTyp {
+	default:
+		return "unknown"
+	case CHECKTYPE_JSON:
+		return "json"
+	case CHECKTYPE_FORM:
+		return "form"
+	case CHECKTYPE_QUERY:
+		return "query"
+	}
+}

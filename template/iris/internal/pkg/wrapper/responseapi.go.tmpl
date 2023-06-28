@@ -1,0 +1,90 @@
+package wrapper
+
+import (
+	"{{.ModPrefix}}{{.Name}}/internal/pkg/logger"
+	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/context"
+	"go.uber.org/zap"
+)
+
+type BaseResp struct {
+	Code      int         `json:"code"`
+	Message   string      `json:"message"`
+	Data      interface{} `json:"data"`
+	Error     string      `json:"error"`
+	RequestID string      `json:"request_id"`
+}
+
+// http response
+func makeResponse(ctx *context.Context, data interface{}, msg string, code int, errMsg string) {
+	resp := BaseResp{}
+
+	if msg == "" {
+		msg = "success"
+	} else {
+		code = ctx.GetStatusCode()
+	}
+
+	resp.Error = errMsg
+	resp.Code = code
+	resp.Message = msg
+	resp.Data = data
+
+	err := ctx.JSON(resp)
+	if err != nil {
+		logger.Logger.Info("make response error ", zap.Error(err))
+	}
+}
+
+func makeResponseWithCode(ctx *context.Context, data interface{}, msg string, msgCode int) {
+	resp := BaseResp{}
+	var code int
+	if msg == "" || msg == "success" {
+		msg = "success"
+		code = 200
+	} else {
+		code = msgCode
+	}
+	resp.Code = code
+	resp.Message = msg
+	resp.Data = data
+
+	err := ctx.JSON(resp)
+	if err != nil {
+		logger.Logger.Info("make response error ", zap.Error(err))
+	}
+}
+
+func SendApiFullResponse(ctx *Context, data interface{}, msg string, code int, errMsg string) {
+	ctx.StatusCode(iris.StatusOK)
+	makeResponse(ctx.Context, data, "", code, errMsg)
+}
+
+func SendApiResponse(ctx *Context, data interface{}) {
+	ctx.StatusCode(iris.StatusOK)
+	makeResponseWithCode(ctx.Context, data, "", iris.StatusOK)
+}
+
+// SendRestfulApiResponse 通用restful响应 200
+func SendRestfulApiResponse(ctx *Context, data interface{}, msg string) {
+	ctx.StatusCode(iris.StatusOK)
+	makeResponseWithCode(ctx.Context, data, "", iris.StatusOK)
+}
+
+// SendApiBadResponse 参数错误 400
+func SendApiBadResponse(ctx *Context, data interface{}, msg string) {
+	ctx.StatusCode(iris.StatusBadRequest)
+	makeResponseWithCode(ctx.Context, nil, msg, iris.StatusBadRequest)
+}
+
+// SendApiForbiddenResponse 认证错误 403
+func SendApiForbiddenResponse(ctx *context.Context) {
+	ctx.StatusCode(iris.StatusForbidden)
+	makeResponseWithCode(ctx, nil, "", iris.StatusBadRequest)
+}
+
+// SendApiErrorResponse 参数错误 500
+func SendApiErrorResponse(ctx *Context, data interface{}, msg string) {
+	ctx.StatusCode(iris.StatusInternalServerError)
+	makeResponseWithCode(ctx.Context, nil, msg, iris.StatusInternalServerError)
+}

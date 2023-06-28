@@ -24,7 +24,7 @@ func (re *Response) Success(ctx iris.Context, data interface{}) {
 		RequestId: GetRequestID(ctx),
 	}
 	ctx.StatusCode(http.StatusOK)
-	_, _ = ctx.JSON(rsp)
+	_ = ctx.JSON(rsp)
 	return
 }
 
@@ -49,7 +49,7 @@ func (re *Response) Fail(ctx iris.Context, err interface{}) {
 		}
 	}
 
-	_, _ = ctx.JSON(rsp)
+	_ = ctx.JSON(rsp)
 	return
 }
 
