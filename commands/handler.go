@@ -11,6 +11,10 @@ import (
 func NewAction() cli.ActionFunc {
 	return func(ctx *cli.Context) (err error) {
 		f.Name = ctx.Args().First()
+		fmt.Println(f.Name)
+		fmt.Println(f.Path)
+		fmt.Println(f.Host)
+		fmt.Println(f.LogPath)
 		if f.Path != "" {
 			if f.Path, err = filepath.Abs(f.Path); err != nil {
 				return
